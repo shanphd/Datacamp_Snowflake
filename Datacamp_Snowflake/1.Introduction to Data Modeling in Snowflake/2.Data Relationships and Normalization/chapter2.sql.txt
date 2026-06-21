@@ -1,0 +1,85 @@
+--------------------------------------------------
+
+---------1NF.sql-------------
+
+Create or replace table ingredients (ingredient_id number(10,0) primary key,ingredient varchar(255));
+Create or replace table reviews (review_id number(10,0) primary key,review varchar(255));
+
+select TRIM(f.value) from productqualityrating 
+LATERAL FLATTEN(INPUT => SPLIT (productqualityrating.ingredients, ',')) f; 
+
+SELECT TRIM(f.value) AS ingredient
+FROM productqualityrating,
+LATERAL FLATTEN(INPUT => SPLIT(productqualityrating.ingredients, ',')) f;
+
+
+select row_number() over (order by TRIM(f.value)),
+TRIM(f.value) from productqualityrating join
+LATERAL FLATTEN(INPUT => SPLIT(productqualityrating.ingredients, ';')) f 
+group by TRIM(f.value); 
+
+
+insert into ingredients (ingredient_id,ingredient) 
+SELECT
+	ROW_NUMBER() OVER (ORDER BY TRIM(f.value)),
+	TRIM(f.value)
+FROM productqualityrating,
+LATERAL FLATTEN(INPUT => SPLIT(productqualityrating.ingredients, ';')) f
+GROUP BY TRIM(f.value);
+
+insert into reviews (review_id,review)
+SELECT
+	ROW_NUMBER() OVER (ORDER BY TRIM(f.value)) as review,
+	TRIM(f.value)
+FROM productqualityrating,
+LATERAL FLATTEN(INPUT => SPLIT(productqualityrating.review, ';')) f
+GROUP BY TRIM(f.value);
+-------------- 
+
+
+--------------------------------------------
+-------2NF.SQL------------ 
+
+
+
+CREATE OR REPLACE TABLE manufacturers (
+    manufacturer_id NUMBER(10,0) PRIMARY KEY,
+    manufacturer VARCHAR(255),
+    company_location VARCHAR(255)
+);
+
+insert into manufacturers (manufacturer_id, manufacturer, company_location)
+select row_number() over (order by manufacturer,company_location) as manufacturer_id,manufacturer, company_location from productqualityrating
+GROUP BY productqualityrating.manufacturer , productqualityrating.company_location;
+
+
+
+INSERT INTO manufacturers (manufacturer_id, manufacturer, company_location)
+SELECT 
+	-- Generate a sequential number
+	ROW_NUMBER() OVER (ORDER BY manufacturer, company_location),
+	manufacturer, 
+	company_location
+FROM productqualityrating
+-- Aggregate data by the other attributes
+GROUP BY manufacturer, 
+	company_location; 
+	
+	--------------------------------- 
+	
+---------------------------------------------------------
+----------3NF.sql--------------
+
+create or replace table locations(location_id number(10,0) primary key,location varchar(255));
+
+
+insert into locations (location_id, location)
+Select 
+row_number() over (order by company_location),company_location
+from manufacturers group by company_location;
+
+
+alter table manufacturers drop column if EXISTS company_location;
+
+-----------------------
+

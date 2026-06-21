@@ -1,0 +1,563 @@
+----------Chapter3.sql------------------------
+---------Creating entities for ER model----
+
+create or replace table employee_training_details (
+	employee_training_id NUMBER(10,0) PRIMARY KEY,
+	year NUMBER(4,0),
+		employee_id NUMBER(38,0),
+    training_id NUMBER(38,0),
+	FOREIGN KEY (employee_id) references employees(employee_id),
+	FOREIGN KEY (training_id) references trainings(training_id)
+);create or replace table employee_training_details (
+	employee_training_id NUMBER(10,0) PRIMARY KEY,
+	year NUMBER(4,0),
+		employee_id NUMBER(38,0),
+    training_id NUMBER(38,0),
+	FOREIGN KEY (employee_id) references employees(employee_id),
+	FOREIGN KEY (training_id) references trainings(training_id)
+);
+
+-----------
+
+-----------
+SELECT 
+	-- Add attributes to select
+	employees.___, 
+    trainings.___
+FROM employees
+	-- Merge entities on common keys
+	___ trainings
+	ON ___ = ___
+LIMIT 50;
+
+select employees.employee_id,
+trainings.avg_traning_score
+from employees
+join trainings
+on employees.employee_id = trainings.employee_id
+LIMIT 50;
+-----------
+
+
+SELECT 
+	employees.employee_id, 
+    trainings.avg_training_score
+FROM employees
+	JOIN trainings 
+	ON employees.employee_id = trainings.employee_id
+where trainings.avg_training_score > 65
+LIMIT 50; 
+
+
+-------
+
+
+SELECT 
+	employees.employee_id, 
+    trainings.avg_training_score
+FROM employees
+	JOIN trainings 
+	ON employees.employee_id = trainings.employee_id
+    -- Merge new entity
+    ___
+    ___
+WHERE trainings.avg_training_score > 65
+	-- Add extra filter
+	___ = 'Operations'
+LIMIT 50;
+
+SELECT 
+	employees.employee_id, 
+    trainings.avg_training_score
+FROM employees
+	JOIN trainings 
+	ON employees.employee_id = trainings.employee_id
+	JOIN departments
+	ON employees.department_id = departments.department_id
+where trainings.avg_training_score > 65
+and departments.department_name = 'Operations'
+LIMIT 50; 
+
+
+---------------
+
+-----Preparing dimensions 
+
+
+
+ALTER TABLE IF EXISTS trainings 
+RENAME TO dim_trainings;
+
+
+-- Create new entity
+___ (
+  	-- Add unique identifier
+    date_id NUMBER(10,0) ___,
+  	-- Add new attributes to register date
+    ___ NUMBER(4,0),
+    ___ NUMBER(2,0)
+);
+
+create table dim_date (
+  date_id NUMBER(10,0) PRIMARY KEY,
+  year NUMBER(4,0),
+  month NUMBER(2,0)
+);
+
+
+SELECT
+	-- Retrieve all attributes from the dimension
+	___
+FROM fact_employee_trainings 
+	-- Merge fact table with dimension
+	JOIN ___
+    ON fact_employee_trainings.employee_id = ___;
+
+
+select dim_employees.* from fact_employee_trainings
+JOIN dim_employees ON fact_employee_trainings.employee_id = dim_employees.employee_id;
+
+
+SELECT 
+	dim_employees.*,
+    -- Retrieve average training scores
+    ___.avg_training_score
+FROM fact_employee_trainings 
+	JOIN dim_employees
+    ON fact_employee_trainings.employee_id = dim_employees.employee_id
+    -- Merge fact table with dimension
+    ___
+    ___ = ___
+-- Add filter
+___ dim_trainings.___ < 100; 
+
+select dim_employees.*,
+dim_trainings.avg_training_score
+from fact_employee_trainings
+join dim_employees ON
+fact_employee_trainings.employee_id = dim_employees.employee_id
+join dim_trainings ON 
+fact_employee_trainings.training_id = dim_trainings.training_id
+where  dim_trainings.avg_training_score < 100;
+
+
+
+
+
+select dim_employees.*,
+dim_trainings.avg_training_score,
+dim_departments.department_name
+from fact_employee_trainings
+join dim_employees ON
+fact_employee_trainings.employee_id = dim_employees.employee_id
+join dim_trainings ON 
+fact_employee_trainings.training_id = dim_trainings.training_id
+join dim_departments ON
+fact_employee_trainings.department_id = dim_departments.department_id
+where  dim_trainings.avg_training_score < 100;
+
+
+
+
+select dim_employees.*,
+dim_trainings.avg_training_score,
+dim_departments.department_name
+from fact_employee_trainings
+join dim_employees ON
+fact_employee_trainings.employee_id = dim_employees.employee_id
+join dim_trainings ON 
+fact_employee_trainings.training_id = dim_trainings.training_id
+join dim_departments ON
+fact_employee_trainings.department_id = dim_departments.department_id
+join dim_date ON
+fact_employee_trainings.date_id = dim_date.date_id
+where  dim_trainings.avg_training_score < 100
+and dim_date.year = 2023;
+	
+	
+------------------
+
+
+-------creating hubs 
+
+
+-- Create a new hub entity
+___ (
+	-- Assign automated values to the hub key
+	___ AUTOINCREMENT PRIMARY KEY,
+	employee_id NUMBER(38,0),
+	-- Add attributes for historical tracking
+	___ TIMESTAMP,
+	___ VARCHAR(255)
+);
+
+
+create or replace table hub_employee (
+hub_employee_key NUMBER(10,0) AUTOINCREMENT PRIMARY KEY,
+employee_id NUMBER(38,0),
+load_date TIMESTAMP,
+record_source varchar(255)
+); 
+
+
+CREATE OR REPLACE TABLE hub_department (
+	-- Assign automated values to the hub key
+	___ PRIMARY KEY,
+  	-- Add hubs key reference
+	___ NUMBER(38,0),
+	-- Add attributes for historical tracking
+	___ TIMESTAMP,
+	___ VARCHAR(255)
+);
+
+create or replace table hub_department (
+hub_department_id NUMBER(10,0) AUTOINCREMENT PRIMARY KEY,
+department_id NUMBER(38,0),
+load_date TIMESTAMP,
+record_source varchar(255)
+);
+
+
+create or replace table hub_training (
+hub_training_key NUMBER(10,0) AUTOINCREMENT PRIMARY KEY,
+training_id NUMBER(38,0),
+load_date TIMESTAMP,
+record_source varchar(255)
+);
+
+
+--------------
+
+Creating satellites
+
+
+-- Create a new satellite
+___ (
+	sat_employee_key NUMBER(10,0) AUTOINCREMENT PRIMARY KEY,
+	hub_employee_key NUMBER(10,0),
+   	employee_name VARCHAR(255),
+    gender CHAR(1),
+    age NUMBER(3,0),
+	-- Add history tracking attributes
+	___ TIMESTAMP
+    ___ VARCHAR(255),
+	-- Add a reference to foreign hub
+    FOREIGN KEY (___) REFERENCES ___(___)
+);
+
+create or replace table sat_employee(
+sat_employee_key NUMBER (10,0) AUTOINCREMENT PRIMARY KEY,
+hub_employee_key NUMBER (10,0),
+employee_name VARCHAR(255),
+gender CHAR(1),
+age NUMBER(3,0),
+load_date TIMESTAMP,
+record_source VARCHAR(255),
+FOREIGN KEY (hub_employee_key) REFERENCES hub_employee(hub_employee_key)
+);
+
+
+CREATE OR REPLACE TABLE sat_department (
+	-- Add the satellite's unique identifier
+	sat_department_key NUMBER(10,0) ___,
+	-- Add the hub's key attribute
+	___ NUMBER(10,0),
+	department_name VARCHAR(255),
+	region VARCHAR(255),
+    -- Add history tracking attributes
+    ___ TIMESTAMP,
+    ___ VARCHAR(255),
+	-- Add a reference to foreign hub
+	___
+);
+
+create or replace table sat_department (
+	sat_department_key NUMBER(10,0) AUTOINCREMENT PRIMARY KEY,
+	hub_department_key NUMBER(10,0),
+	department_name VARCHAR(255),
+	region VARCHAR(255),
+	load_date TIMESTAMP,
+	record_source VARCHAR(255),
+	FOREIGN KEY (hub_department_key) REFERENCES hub_department(hub_department_key)
+);
+
+CREATE OR REPLACE TABLE sat_training (
+	sat_training_key NUMBER(10,0) AUTOINCREMENT PRIMARY KEY,
+	-- Add the hub's key reference
+	 hub_training_key NUMBER(10,0),
+	training_type VARCHAR(255),
+    duration NUMBER(4,0),
+    trainer_name VARCHAR(255),
+    load_date TIMESTAMP,
+    record_source VARCHAR(255),
+	-- Add a reference to foreign hub
+	FOREIGN KEY(hub_training_key) REFERENCES hub_training(hub_training_key)
+);
+
+-------------- 
+
+Creating links
+
+create or replace table link_all (
+	link_key NUMBER(10,0) AUTOINCREMENT PRIMARY KEY,
+	load_date TIMESTAMP,
+	record_source varchar(255)
+);
+
+
+CREATE OR REPLACE TABLE link_all (
+	link_key NUMBER(10,0) AUTOINCREMENT PRIMARY KEY,
+    -- Add the hub's key attribute
+	hub_employee_key NUMBER(10,0),
+  	load_date TIMESTAMP,
+    record_source VARCHAR(255),
+  	-- Add a relationship with the foreign hub
+	FOREIGN KEY (hub_employee_key) REFERENCES hub_employee(hub_employee_key)
+);
+
+
+CREATE OR REPLACE TABLE link_all (
+	link_key NUMBER(10,0) AUTOINCREMENT PRIMARY KEY,
+	hub_employee_key NUMBER(10,0),
+  	-- Add the hub's key attributes
+  	hub_training_key NUMBER(10,0),
+  	hub_department_key NUMBER(10,0),
+  	load_date TIMESTAMP,
+    record_source VARCHAR(255),
+	FOREIGN KEY (hub_employee_key) REFERENCES hub_employee(hub_employee_key),
+  	-- Add a relationship with the foreign hubs
+FOREIGN KEY(hub_training_key) REFERENCES hub_training(hub_training_key),
+  	FOREIGN KEY (hub_department_key) REFERENCES hub_department(hub_department_key)
+);
+
+-----------
+
+Mastering data retrieval
+
+SELECT
+	-- Add the attribute from employees
+    hub_e.___,
+    -- Add the attribute from the department
+    sat_d.___
+FROM hub_employee AS hub_e
+	-- Merge hub with link
+	JOIN ___ AS li
+    ON hub_e.hub_employee_key = ___
+	-- Merge link with satellite
+    JOIN ___ AS sat_d
+    ON li.hub_department_key = ___;
+
+    SELECT
+    hub_e.hub_employee_key,
+    sat_d.department_name
+    from hub_employee as hub_e
+    join link_all as li
+    on hub_e.hub_employee_key = li.hub_employee_key
+    join sat_department as sat_d
+    on li.hub_department_key = sat_d.hub_department_key; 
+	
+	
+	
+	SELECT
+    hub_e.hub_employee_key,
+    sat_d.department_name,
+    -- Add the new attribute
+	___
+FROM hub_employee AS hub_e
+	JOIN link_all AS li 
+    ON hub_e.hub_employee_key = li.hub_employee_key
+    JOIN sat_department AS sat_d 
+    ON li.hub_department_key = sat_d.hub_department_key
+    -- Merge the satellite, even if there is no data for that employee
+    ___ JOIN ___ AS sat_t
+    ON li.hub_training_key = ___; 
+
+     SELECT
+    hub_e.hub_employee_key,
+    sat_d.department_name,
+    sat_t.avg_training_score,
+    from hub_employee as hub_e
+    join link_all as li
+    on hub_e.hub_employee_key = li.hub_employee_key
+    join sat_department as sat_d
+    on li.hub_department_key = sat_d.hub_department_key
+    join sat_training as sat_t
+    on li.hub_training_key = sat_t.hub_training_key;
+	
+	
+	
+	SELECT
+    hub_e.hub_employee_key,
+    sat_d.department_name,
+    sat_t.avg_training_score
+FROM hub_employee AS hub_e
+	JOIN link_all AS li 
+    ON hub_e.hub_employee_key = li.hub_employee_key
+    JOIN sat_department AS sat_d 
+    ON li.hub_department_key = sat_d.hub_department_key
+    LEFT JOIN sat_training AS sat_t 
+    ON li.hub_training_key = sat_t.hub_training_key
+-- Add filter for training
+where sat_t.awards_won = 1;
+
+
+SELECT
+    hub_e.hub_employee_key,
+    sat_d.department_name,
+    -- Aggregate the attribute
+    max(sat_t.avg_training_score) AS average_training
+FROM hub_employee hub_e
+	JOIN link_all AS li 
+    ON hub_e.hub_employee_key = li.hub_employee_key
+    JOIN sat_department AS sat_d 
+    ON li.hub_department_key = sat_d.hub_department_key
+    LEFT JOIN sat_training AS sat_t 
+    ON li.hub_training_key = sat_t.hub_training_key
+WHERE sat_t.awards_won = 1
+-- Group the results 
+group by hub_e.hub_employee_key, sat_d.department_name;
+
+
+------------------------
+
+-- Create a view customer_financial_summary
+___ ___ ___
+SELECT c.customerid, 
+	c.estimatedsalary,
+	cp.productid
+FROM customers AS c
+	-- Merge entity
+	___ AS cp 
+	___ c.customerid = ___;
+	
+	
+	-- Create a view customer_financial_summary
+CREATE OR REPLACE VIEW customer_financial_summary AS
+SELECT c.customerid, 
+	c.estimatedsalary,
+	cp.productid
+FROM customers AS c
+	-- Merge entity
+	left join customerproducts AS cp 
+on 
+c.customerid = cp.customerid;
+
+CREATE OR REPLACE VIEW customer_financial_summary AS
+SELECT c.customerid, 
+	-- Create a new conditional attribute
+    CASE 
+        WHEN AVG(c.estimatedsalary) > 150000 THEN 'Top Income'
+        WHEN AVG(c.estimatedsalary) > 90000 THEN 'High Income'
+        WHEN AVG(c.estimatedsalary) > 20000 THEN 'Average Income'
+        ELSE 'Low Income'
+    END AS customer_category,
+    -- Add aggregation to the attributes
+    COUNT(DISTINCT cp.productid) AS product_count
+FROM customers AS c
+	LEFT JOIN customerproducts AS cp 
+	ON c.customerid = cp.customerid
+-- Group the results
+GROUP BY c.customerid;
+-----------
+
+
+----------
+
+WITH customer_status AS (
+	SELECT c.customerid,
+  		c.age,
+        c.tenure,
+        CASE 
+            WHEN ch.customerid IS NOT NULL THEN 'Churned' 
+            ELSE 'Active' 
+        END AS status
+    FROM customers AS c
+    	LEFT JOIN churn AS ch 
+  		ON c.customerid = ch.customerid
+    GROUP BY c.customerid, c.age, c.tenure, status
+)
+-- Extract attribute from CTE
+___
+FROM customer_status
+-- Filter results
+___ customerid IN (___ customerid
+                   ___
+                   ___ estimatedsalary > 175000);
+				   
+				   
+WITH customer_status AS (
+	SELECT c.customerid,
+  		c.age,
+        c.tenure,
+        CASE 
+            WHEN ch.customerid IS NOT NULL THEN 'Churned' 
+            ELSE 'Active' 
+        END AS status
+    FROM customers AS c
+    	LEFT JOIN churn AS ch 
+  		ON c.customerid = ch.customerid
+    GROUP BY c.customerid, c.age, c.tenure, status
+)
+-- Extract attribute from CTE
+select c.customerid
+FROM customer_status as c
+-- Filter results
+where customerid IN (select customerid,
+                   from customers where
+                   estimatedsalary > 175000);
+				   
+				   
+WITH customer_status AS (
+	SELECT c.customerid,
+  		c.age,
+        c.tenure,
+        CASE 
+            WHEN ch.customerid IS NOT NULL THEN 'Churned' 
+            ELSE 'Active' 
+        END AS status
+    FROM customers AS c
+    	LEFT JOIN churn AS ch 
+  		ON c.customerid = ch.customerid
+    GROUP BY c.customerid, c.age, c.tenure, status
+)
+SELECT status,
+	-- Count customers
+	count(distinct customerid) AS unique_customers
+FROM customer_status
+WHERE customerid IN (SELECT customerid 
+                     FROM customers 
+                     WHERE estimatedsalary > 175000)
+-- Aggregate values
+group by STATUS;
+
+------------- 
+
+
+--------------
+WITH customer_status AS (
+	SELECT c.customerid,
+  		c.age,
+        c.tenure,
+        CASE 
+            WHEN ch.customerid IS NOT NULL THEN 'Churned' 
+            ELSE 'Active' 
+        END AS status
+    FROM customers AS c
+    	LEFT JOIN churn AS ch 
+  		ON c.customerid = ch.customerid
+    GROUP BY c.customerid, c.age, c.tenure, status
+)
+SELECT status,
+	COUNT(customerid) AS unique_customers,
+    -- Calculate averages
+    avg(age) AS average_age,
+    avg(tenure) AS average_tenure
+FROM customer_status
+WHERE customerid IN (SELECT customerid 
+                     FROM customers 
+                     WHERE estimatedsalary > 175000)
+GROUP BY status
+-- Filter data
+ having average_tenure > 2;
+
+---------------
